@@ -1,21 +1,21 @@
 # UWB to Flight Controller Bridge
 
-Dự án này kết nối module UWB **Decawave DWM1001** với flight controller (Pixhawk/ArduPilot) thông qua giao thức MAVLink. Vị trí từ UWB được gửi liên tục dưới dạng thông điệp `VISION_POSITION_ESTIMATE`, giúp EKF indoor hoạt động mà không cần GPS.
+This project bridges a **Decawave DWM1001** Ultra-Wideband module with a MAVLink-based flight controller (Pixhawk / ArduPilot). UWB position data is continuously sent as `VISION_POSITION_ESTIMATE` messages, enabling indoor EKF-based localization without GPS.
 
 ---
 
-## 🗂️ Cấu trúc dự án
+## Project Structure
 
 ```
 uwb_to_fc/
-├── uwb_test.py                        # Entry point chính
+├── uwb_test.py                        # Main entry point
 ├── uwb/
 │   ├── __init__.py
-│   ├── uwb.py                         # Class UWB – đọc và lọc vị trí
+│   ├── uwb.py                         # UWB class – reads and filters position
 │   └── decawave_1001_uart/
 │       ├── __init__.py
-│       ├── decawave_1001.py           # UART driver cho DWM1001
-│       └── messages/                  # Các message TLV của DWM1001
+│       ├── decawave_1001.py           # UART driver for DWM1001
+│       └── messages/                  # TLV message definitions
 │           ├── dwm_config_response.py
 │           ├── dwm_location_response.py
 │           ├── dwm_position.py
@@ -25,27 +25,27 @@ uwb_to_fc/
 │           └── ...
 └── drone/
     ├── __init__.py
-    └── drone.py                       # Class Drone – kết nối FC qua DroneKit
+    └── drone.py                       # Drone class – connects FC via DroneKit
 ```
 
 ---
 
-## ⚙️ Yêu cầu hệ thống
+## System Requirements
 
 - Python 3.7+
-- Raspberry Pi (hoặc Linux board) với 2 cổng serial:
-  - `/dev/ttyAMA0` → Flight Controller (Pixhawk)
-  - `/dev/ttyACM0` → Module UWB DWM1001 (USB)
+- Raspberry Pi or any Linux-based board with two serial ports:
+  - `/dev/ttyAMA0` — Flight Controller (Pixhawk)
+  - `/dev/ttyACM0` — DWM1001 UWB Tag (USB)
 
 ---
 
-## 📦 Cài đặt thư viện
+## Installation
 
 ```bash
 pip install -r requirements.txt
 ```
 
-Hoặc cài thủ công:
+Or manually:
 
 ```bash
 pip install dronekit pyserial bitstring
@@ -53,69 +53,69 @@ pip install dronekit pyserial bitstring
 
 ---
 
-## 🚀 Chạy chương trình
+## Usage
 
 ```bash
 python3 uwb_test.py
 ```
 
-Mặc định:
-- Flight Controller: `/dev/ttyAMA0` (115200 baud)
+Defaults:
+- Flight Controller: `/dev/ttyAMA0` at 115200 baud
 - UWB module: `/dev/ttyACM0`
-- Tần số gửi VPE: **10 Hz**
+- Send rate: **10 Hz**
 
 ---
 
-## 🔧 Cấu hình
+## Configuration
 
-Chỉnh trực tiếp trong `uwb_test.py`:
+Edit the top of `uwb_test.py`:
 
 ```python
-RATE_HZ  = 10.0               # Tần số gửi (Hz)
-port_fc  = "/dev/ttyAMA0"     # Cổng serial FC
-port_uwb = "/dev/ttyACM0"     # Cổng USB UWB
+RATE_HZ  = 10.0               # Send rate in Hz
+port_fc  = "/dev/ttyAMA0"     # Flight controller serial port
+port_uwb = "/dev/ttyACM0"     # UWB module USB port
 
-# Tọa độ EKF origin – set về vị trí lab/thực địa của bạn
+# EKF origin coordinates – set to your actual field location
 lat = int(10.762622 * 1e7)
 lon = int(106.660172 * 1e7)
 ```
 
 ---
 
-## 🧠 Cơ chế hoạt động
+## How It Works
 
 ```
-DWM1001 (UART) → uwb.py (get_location) → drone.py (send_uwb_location)
-                                                    ↓
+DWM1001 (UART) -> uwb.py (get_location) -> drone.py (send_uwb_location)
+                                                    |
                                VISION_POSITION_ESTIMATE (MAVLink)
-                                                    ↓
+                                                    |
                                           Pixhawk EKF (indoor)
 ```
 
-**Chuyển đổi tọa độ ENU → NED** (trong `drone.py`):
+**Coordinate conversion ENU (UWB) to NED (Pixhawk)** in `drone.py`:
 ```
 x_ned =  y_uwb
 y_ned =  x_uwb
 z_ned = -z_uwb
 ```
 
-### Quy trình khởi động
+### Startup Sequence
 
-1. Set EKF GPS Origin + Home Position (indoor mode, không cần GPS)
-2. Warm-up 3 giây – gửi VPE liên tục để EKF hội tụ
-3. Vào vòng lặp chính @ 10 Hz với **precise timing** (bù trừ thời gian xử lý)
+1. Set EKF GPS Origin and Home Position (indoor mode, no GPS required)
+2. 3-second warm-up — continuously sends VPE to let EKF converge before arming
+3. Main loop at 10 Hz with **precise timing** (compensates for processing overhead)
 
 ---
 
-## 📡 Hardware
+## Hardware
 
-| Thiết bị | Cổng | Ghi chú |
+| Device | Port | Notes |
 |---|---|---|
 | Pixhawk / ArduPilot FC | `/dev/ttyAMA0` | UART, 115200 baud |
 | Decawave DWM1001 Tag | `/dev/ttyACM0` | USB-UART |
 
 ---
 
-## 📝 License
+## License
 
 MIT License
