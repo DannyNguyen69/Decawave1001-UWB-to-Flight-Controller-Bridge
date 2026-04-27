@@ -1,20 +1,9 @@
-"""
-uwb_test.py
------------
-Giống uwb_to_fc.py (DroneKit) nhưng dùng timing chính xác:
-    sleep = interval - elapsed
-thay vì sleep cứng 0.1s như bản gốc.
-
-Mục đích: test xem rate ổn định hơn có cải thiện EKF so với
-sleep cứng không.
-"""
-
 import time
 
 from uwb.uwb import UWB
 from drone.drone import Drone
 
-RATE_HZ = 10.0          # Tần số gửi mong muốn (Hz)
+RATE_HZ = 10.0          # Tần số gửi 
 INTERVAL = 1.0 / RATE_HZ
 
 
@@ -90,12 +79,11 @@ class UWBToFC:
                     missed += 1
                     print("[uwb_test] [WARN] Không đọc được UWB (missed={})".format(missed))
 
-                # ── Precise timing: bù trừ thời gian xử lý ────────────────
+                # Precise timing: bù trừ thời gian xử lý
                 elapsed = time.time() - t0
                 sleep_t = INTERVAL - elapsed
                 if sleep_t > 0:
                     time.sleep(sleep_t)
-                # ──────────────────────────────────────────────────────────
 
         except KeyboardInterrupt:
             print("\n[uwb_test] Dừng. Đã gửi {} frame, bỏ lỡ {} frame.".format(sent, missed))
